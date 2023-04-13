@@ -4,7 +4,8 @@ An extension of the classic Pandas DataFrame with function-enabled columns.
 # Documentation
 ## FuncDataFrame
 The package simply extend the standard Pandas DataFrame, hence all operations on DataFrames are supported.
-It it straighforward to substitute Pandas DataFrames with FuncDataFrames:
+
+It is straighforward to substitute Pandas DataFrames with FuncDataFrames:
 ```python
 fdf = FuncDataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
 print(fdf)
