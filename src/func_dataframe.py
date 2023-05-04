@@ -35,9 +35,14 @@ class FuncDataFrame:
     for c in func.func_df_dict:
       if func.func_df_dict[c] not in self.obj:
         raise ValueError(f"[{func.__name__}] Column '{func.func_df_dict[c]}' not found in the dataframe")
-    def wrapper(row):
-      if row[columns].apply(lambda x: x != None).all():
-        return row
+    def wrapper(row, columns=columns):
+      if isinstance(columns, tuple):
+        columns = list(columns)
+        if row[columns].apply(lambda x: x != None).all():
+          return row
+      else:
+        if row[[columns]].apply(lambda x: x != None).all():
+          return row
       
       for c in func.func_df_dict.values():
         if c in self.cc and row[c] is None:
@@ -48,7 +53,10 @@ class FuncDataFrame:
       func_kwargs = {}
       for c in func.func_df_dict:
         func_kwargs[c] = row[func.func_df_dict[c]]
-      row[columns] = func(**func_kwargs)
+      if len(columns) == 1:
+        row[columns] = func(**func_kwargs)
+      else:
+        row[columns] = func(**func_kwargs)
       return row
     wrapper.__name__ = func.__name__
     return wrapper
@@ -57,21 +65,18 @@ class FuncDataFrame:
     cf_dict = cf_dict.copy()
     
     cc = list(cf_dict.keys())
-    for c in cc:
-      if not isinstance(c, tuple):
-        cf_dict[(c,)] = cf_dict.pop(c)
     
-    self.cc = reduce(lambda c1, c2: c1 + c2, cf_dict.keys())
+    self.cc = reduce(lambda c1, c2: c1 + c2, map(lambda c: (c,) if not isinstance(c, tuple) else c, cf_dict.keys()))
     for c in self.cc:
       self.obj[c] = None
     
     for c in cf_dict:
       if not hasattr(cf_dict[c], 'func_df_dict'):
         cf_dict[c] = fdf_func()(cf_dict[c])
-      cf_dict[c] = self.decorate_func(cf_dict[c], list(c))
+      cf_dict[c] = self.decorate_func(cf_dict[c], c)
     
     self.cf_dict = cf_dict
-      
+
     if shuffle:
       self.obj = self.obj.sample(frac=1).reset_index(drop=True)
     for func in cf_dict.values():
