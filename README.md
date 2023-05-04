@@ -2,7 +2,7 @@
 An extension of the classic Pandas DataFrame with function-enabled columns.
 
 # Documentation
-## FuncDataFrame
+## fdf
 The package provides a DataFrame accessor for function-enabled columns, with (optional) parallel computation provided by Dask.
 
 Usage
