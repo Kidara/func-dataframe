@@ -15,6 +15,8 @@ def fdf_func(ignore_args = {}, **kwargs):
       raise ValueError(f"[{func.__name__}] Invalid keyword arguments in fdf_func decorator")
     
     func_kwargs.update(kwargs)
+    import copy
+    func = copy.deepcopy(func)
     func.func_df_dict = func_kwargs
     return func
   return decorator
