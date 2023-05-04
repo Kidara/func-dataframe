@@ -39,18 +39,21 @@ class FuncDataFrame:
       if row[columns].apply(lambda x: x != None).all():
         return row
       
-      for c in func.func_df_dict:
-        if c in self.cf_dict and row[c] is None:
-          row = self.cf_dict[c](row)
+      for c in func.func_df_dict.values():
+        if c in self.cc and row[c] is None:
+          for cs in self.cf_dict:
+            if c in cs:
+              row = self.cf_dict[cs](row)
       
       func_kwargs = {}
       for c in func.func_df_dict:
         func_kwargs[c] = row[func.func_df_dict[c]]
       row[columns] = func(**func_kwargs)
       return row
+    wrapper.__name__ = func.__name__
     return wrapper
     
-  def compute(self, cf_dict, parallel=False, n_dask_partitions=None, shuffle=True, scheduler='threads'):
+  def compute(self, cf_dict, parallel=False, n_dask_partitions=None, shuffle=False, scheduler='threads'):
     cf_dict = cf_dict.copy()
     
     cc = list(cf_dict.keys())
@@ -58,20 +61,21 @@ class FuncDataFrame:
       if not isinstance(c, tuple):
         cf_dict[(c,)] = cf_dict.pop(c)
     
+    self.cc = reduce(lambda c1, c2: c1 + c2, cf_dict.keys())
+    for c in self.cc:
+      self.obj[c] = None
+    
     for c in cf_dict:
       if not hasattr(cf_dict[c], 'func_df_dict'):
         cf_dict[c] = fdf_func()(cf_dict[c])
       cf_dict[c] = self.decorate_func(cf_dict[c], list(c))
     
     self.cf_dict = cf_dict
-        
-    cc = reduce(lambda c1, c2: c1 + c2, cf_dict.keys())
-    for c in cc:
-      self.obj[c] = None
       
     if shuffle:
       self.obj = self.obj.sample(frac=1).reset_index(drop=True)
     for func in cf_dict.values():
+      print(f"Applying {func.__name__}...")
       if parallel:
         from dask import dataframe as dd
         from dask.diagnostics import ProgressBar
