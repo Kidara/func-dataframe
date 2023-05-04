@@ -49,6 +49,30 @@ Applying plus...
 3  3  3  5  4
 4  4  4  6  5
 ```
+Multiple columns output is supported:
+```python
+def plus(a):
+    return a+1
+def d_needed(d, b):
+    return d+b, d-b
+
+df = pd.DataFrame({'a':list(range(5)),'b':list(range(5))})
+df = df.fdf.compute({('e','f'):d_needed, 'd':plus}, parallel=True, n_dask_partitions=5, shuffle=True)
+print(df)
+```
+```
+Output:
+Applying d_needed...
+[########################################] | 100% Completed | 101.73 ms
+Applying plus...
+[########################################] | 100% Completed | 101.65 ms
+   a  b  e  f  d
+0  0  0  1  1  1
+1  3  3  7  1  4
+2  1  1  3  1  2
+3  2  2  5  1  3
+4  4  4  9  1  5
+```
 ## fdf_func
 fdf_func is a decorator for the functions you want to add in the dataframe.
 You can decorate any function, and specify two behaviours:
