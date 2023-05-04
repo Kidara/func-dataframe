@@ -19,23 +19,16 @@ def fdf_func(ignore_args = {}, **kwargs):
     return func
   return decorator
 
-  
-def _dask_map(func):
-  import func_dataframe
-  def _inner(partition, func=func):
-    return partition.apply(func, axis=1)
-  return _inner
-
 @register_dataframe_accessor("fdf")
 class FuncDataFrame:
   def __init__(self, pandas_obj):
     self.obj = pandas_obj
   
-  def decorate_func(self, func, columns):
-    for c in func.func_df_dict:
-      if func.func_df_dict[c] not in self.obj:
-        raise ValueError(f"[{func.__name__}] Column '{func.func_df_dict[c]}' not found in the dataframe")
-    def wrapper(row, columns=columns):
+  def decorate_func(self, columns):
+    for c in self.cf_dict[columns].func_df_dict:
+      if self.cf_dict[columns].func_df_dict[c] not in self.obj:
+        raise ValueError(f"[{self.cf_dict[columns].__name__}] Column '{self.cf_dict[columns].func_df_dict[c]}' not found in the dataframe")
+    def wrapper(row, func=self.cf_dict[columns], columns=columns):
       if isinstance(columns, tuple):
         columns = list(columns)
         if row[columns].apply(lambda x: x != None).all():
@@ -43,7 +36,7 @@ class FuncDataFrame:
       else:
         if row[[columns]].apply(lambda x: x != None).all():
           return row
-      
+    
       for c in func.func_df_dict.values():
         if c in self.cc and row[c] is None:
           for cs in self.cf_dict:
@@ -58,7 +51,7 @@ class FuncDataFrame:
       else:
         row[columns] = func(**func_kwargs)
       return row
-    wrapper.__name__ = func.__name__
+    wrapper.__name__ = self.cf_dict[columns].__name__
     return wrapper
     
   def compute(self, cf_dict, parallel=False, n_dask_partitions=None, shuffle=False, scheduler='threads'):
@@ -69,13 +62,13 @@ class FuncDataFrame:
     self.cc = reduce(lambda c1, c2: c1 + c2, map(lambda c: (c,) if not isinstance(c, tuple) else c, cf_dict.keys()))
     for c in self.cc:
       self.obj[c] = None
+      
+    self.cf_dict = cf_dict
     
     for c in cf_dict:
       if not hasattr(cf_dict[c], 'func_df_dict'):
         cf_dict[c] = fdf_func()(cf_dict[c])
-      cf_dict[c] = self.decorate_func(cf_dict[c], c)
-    
-    self.cf_dict = cf_dict
+      cf_dict[c] = self.decorate_func(c)
 
     if shuffle:
       self.obj = self.obj.sample(frac=1).reset_index(drop=True)
